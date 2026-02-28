@@ -66,8 +66,6 @@
     .spinner { width: 50px; height: 50px; border: 4px solid #e5ebe8; border-top-color: #00a67d; border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 16px; }
     @keyframes spin { to { transform: rotate(360deg); } }
     .hidden { display: none !important; }
-    .alarm-indicator { background: #fef3c7; border: 2px solid #f59e0b; border-radius: 8px; padding: 8px 12px; margin-top: 8px; font-size: 12px; color: #92400e; display: none; }
-    .alarm-indicator.active { display: block; }
   </style>
 </head>
 <body>
@@ -128,7 +126,6 @@
           <div class="input-group">
             <label class="input-label">訪問終了時間（自動計算）</label>
             <input type="text" id="visitEndTime" class="input-field" readonly style="background:#f5f5f5">
-            <div id="alarmIndicator" class="alarm-indicator">⏰ アラーム設定中</div>
           </div>
         </div>
       </div>
@@ -246,7 +243,6 @@ var recordingTimer = null;
 var recordingSeconds = 0;
 var accumulatedTranscript = '';
 var staffList = [];
-var alarmTimeout = null;
 
 document.addEventListener('DOMContentLoaded', function() {
   document.getElementById('visitDate').value = new Date().toISOString().split('T')[0];
@@ -412,12 +408,9 @@ function calculateEndTime() {
   var startTime = document.getElementById('visitStartTime').value;
   var duration = document.getElementById('visitDuration').value;
   var endTimeField = document.getElementById('visitEndTime');
-  var alarmIndicator = document.getElementById('alarmIndicator');
   
   if (!startTime || !duration) {
     endTimeField.value = '';
-    alarmIndicator.classList.remove('active');
-    if (alarmTimeout) { clearTimeout(alarmTimeout); alarmTimeout = null; }
     return;
   }
   
@@ -430,50 +423,6 @@ function calculateEndTime() {
   var endMinutes = endDate.getMinutes().toString().padStart(2, '0');
   
   endTimeField.value = endHours + ':' + endMinutes;
-  
-  // アラーム設定
-  if (alarmTimeout) { clearTimeout(alarmTimeout); alarmTimeout = null; }
-  
-  var now = new Date();
-  var diff = endDate.getTime() - now.getTime();
-  
-  if (diff > 0) {
-    alarmTimeout = setTimeout(function() {
-      playAlarm();
-    }, diff);
-    alarmIndicator.classList.add('active');
-    alarmIndicator.textContent = '⏰ ' + endHours + ':' + endMinutes + ' にアラームが鳴ります';
-  } else {
-    alarmIndicator.classList.remove('active');
-  }
-}
-
-function playAlarm() {
-  try {
-    var audioContext = new (window.AudioContext || window.webkitAudioContext)();
-    var oscillator = audioContext.createOscillator();
-    var gainNode = audioContext.createGain();
-    
-    oscillator.connect(gainNode);
-    gainNode.connect(audioContext.destination);
-    
-    oscillator.frequency.value = 800;
-    oscillator.type = 'sine';
-    gainNode.gain.value = 0.5;
-    
-    oscillator.start();
-    
-    setTimeout(function() { oscillator.frequency.value = 1000; }, 200);
-    setTimeout(function() { oscillator.frequency.value = 800; }, 400);
-    setTimeout(function() { oscillator.frequency.value = 1000; }, 600);
-    setTimeout(function() { oscillator.frequency.value = 800; }, 800);
-    setTimeout(function() { oscillator.stop(); }, 1000);
-  } catch (e) {
-    console.log('Audio error:', e);
-  }
-  
-  alert('⏰ 訪問終了時間です！');
-  document.getElementById('alarmIndicator').classList.remove('active');
 }
 
 function getVitalData() {
@@ -604,8 +553,6 @@ function resetAll() {
   document.getElementById('step-review').classList.add('hidden');
   document.getElementById('step-saved').classList.add('hidden');
   document.getElementById('errorBox').style.display = 'none';
-  document.getElementById('alarmIndicator').classList.remove('active');
-  if (alarmTimeout) { clearTimeout(alarmTimeout); alarmTimeout = null; }
   updateGenerateButton();
 }
 
